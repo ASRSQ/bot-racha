@@ -14,6 +14,7 @@ async function handleCommand(client, message) {
     const senderId = sender.id._serialized;
     const senderName = sender.pushname || sender.name;
     const isSenderAdmin = config.ADMINS.includes(senderId);
+    
 
     logger.info(`[GRUPO: ${chat.name}] [USER: ${senderName}] Mensagem: "${body}"`);
 
@@ -44,28 +45,51 @@ async function handleCommand(client, message) {
             });
         }
         else if (command.startsWith('!remover')) {
-            const nomeRemover = body.substring(9).trim();
-            if (!nomeRemover) return message.reply('Uso correto: `!remover <nome do jogador>`');
-            db.get('SELECT adicionado_por, tipo_jogador FROM jogadores WHERE nome_jogador LIKE ?', [`%${nomeRemover}%`], (err, row) => {
-                if (err) { logger.error(err.message); return message.reply("Erro ao consultar o banco de dados."); }
-                if (!row) return message.reply(`Jogador "${nomeRemover}" não encontrado na lista.`);
-                if (isSenderAdmin || row.adicionado_por === senderId) {
-                    const eraVagaPrincipal = (row.tipo_jogador === 'linha' || row.tipo_jogador === 'goleiro');
-                    db.run('DELETE FROM jogadores WHERE nome_jogador LIKE ?', [`%${nomeRemover}%`], function(err) {
-                        if (err) { logger.error(err.message); return message.reply("Erro ao remover jogador."); }
-                        if (this.changes > 0) {
-                            message.reply(`Ok, o jogador *${nomeRemover}* foi removido da lista por ${senderName}.`);
-                            logger.info(`Usuário ${senderName} removeu ${nomeRemover} da lista.`);
-                            if (eraVagaPrincipal) { promoverReserva(chat, client); } 
-                            else { enviarLista(chat); }
-                        }
-                    });
-                } else {
-                    message.reply(`❌ Você não pode remover *${nomeRemover}*, pois ele não foi adicionado por você. Peça ao responsável ou a um admin.`);
-                    logger.warn(`Usuário ${senderName} tentou remover ${nomeRemover} sem permissão.`);
-                }
+    const argumento = body.substring(9).trim();
+    if (!argumento) return message.reply('Uso correto: `!remover <nome ou número>`');
+
+    const numeroRemover = parseInt(argumento, 10);
+
+    if (!isNaN(numeroRemover) && numeroRemover > 0) {
+        // ✅ Remover por número
+        db.all('SELECT * FROM jogadores WHERE tipo_jogador IN ("linha", "goleiro") ORDER BY id', [], (err, jogadores) => {
+            if (err) return message.reply("Erro ao consultar o banco de dados.");
+            if (numeroRemover > jogadores.length) return message.reply(`Número inválido. Só existem ${jogadores.length} jogadores na lista principal.`);
+
+            const jogadorAlvo = jogadores[numeroRemover - 1];
+            const podeRemover = isSenderAdmin || jogadorAlvo.adicionado_por === senderId;
+            if (!podeRemover) return message.reply(`❌ Você não pode remover *${jogadorAlvo.nome_jogador}*.`);
+
+            const eraVagaPrincipal = jogadorAlvo.tipo_jogador !== 'reserva';
+
+            db.run('DELETE FROM jogadores WHERE id = ?', [jogadorAlvo.id], function (err) {
+                if (err) return message.reply("Erro ao remover o jogador.");
+                message.reply(`✅ *${jogadorAlvo.nome_jogador}* removido da lista por ${senderName}.`);
+                if (eraVagaPrincipal) promoverReserva(chat, client);
+                else enviarLista(chat);
             });
-        }
+        });
+    } else {
+        // ✅ Remover por nome
+        db.get('SELECT * FROM jogadores WHERE nome_jogador LIKE ?', [`%${argumento}%`], (err, row) => {
+            if (err) return message.reply("Erro ao consultar o banco de dados.");
+            if (!row) return message.reply(`Jogador "${argumento}" não encontrado na lista.`);
+
+            const podeRemover = isSenderAdmin || row.adicionado_por === senderId;
+            if (!podeRemover) return message.reply(`❌ Você não pode remover *${row.nome_jogador}*.`);
+
+            const eraVagaPrincipal = row.tipo_jogador !== 'reserva';
+
+            db.run('DELETE FROM jogadores WHERE id = ?', [row.id], function (err) {
+                if (err) return message.reply("Erro ao remover o jogador.");
+                message.reply(`✅ *${row.nome_jogador}* removido da lista por ${senderName}.`);
+                if (eraVagaPrincipal) promoverReserva(chat, client);
+                else enviarLista(chat);
+            });
+        });
+    }
+}
+
         else if (command.startsWith('!add')) {
             const args = body.split(' ').slice(1);
             if (args.length === 0) return message.reply('Uso: `!add <nome> [goleiro]`');
