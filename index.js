@@ -6,29 +6,6 @@ const { handleCommand } = require('./commandHandler');
 
 logger.info('Iniciando o bot...');
 
-// ---- NOVO: SISTEMA DE FILA DE MENSAGENS ----
-const messageQueue = [];
-let isProcessing = false;
-
-async function processQueue(client) {
-    if (isProcessing || messageQueue.length === 0) {
-        return;
-    }
-    isProcessing = true;
-    const message = messageQueue.shift(); 
-
-    try {
-        await handleCommand(client, message);
-    } catch (e) {
-        logger.error(`Erro não capturado ao processar a mensagem da fila: ${e.stack || e.message}`);
-    } finally {
-        isProcessing = false;
-        processQueue(client);
-    }
-}
-// ---- FIM DO SISTEMA DE FILA ----
-
-
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
@@ -40,7 +17,7 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process',
+            '--single-process', //--no-sandbox and --disable-gpu are the most important
             '--disable-gpu'
         ],
     }
@@ -60,11 +37,9 @@ client.on('disconnected', (reason) => {
     logger.warn(`Bot desconectado: ${reason}`);
 });
 
+// Delega todo o processamento de mensagens para o commandHandler
 client.on('message_create', (message) => {
-    if (message.body.startsWith('!')) {
-        messageQueue.push(message);
-        processQueue(client);
-    }
+    handleCommand(client, message);
 });
 
 client.initialize();
