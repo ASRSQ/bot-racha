@@ -105,24 +105,34 @@ async function enviarLista(chat) {
         listaFormatada += `*Jogadores de Linha (${jogadoresLinha.length}/${info.max_linha})*\n`;
         for (let i = 0; i < info.max_linha; i++) {
             if (i < jogadoresLinha.length) {
-                const jogador = jogadoresLinha[i];
+               const jogador = jogadoresLinha[i];
                 const pago = jogador.status_pagamento === 1 ? '✅' : '...';
-                listaFormatada += `${i + 1}. ${jogador.nome_jogador} - Pgto: ${pago}\n`;
+                const nomeExibido = jogador.nome_jogador.length > 10 
+                    ? jogador.nome_jogador.slice(0, 10) + '…' 
+                    : jogador.nome_jogador;
+                listaFormatada += `${i + 1}. ${nomeExibido} - Pgto: ${pago}\n`;
             } else { listaFormatada += `${i + 1}. ...\n`; }
         }
         listaFormatada += `\n*Goleiros (${goleiros.length}/${info.max_goleiros})*\n`;
         for (let i = 0; i < info.max_goleiros; i++) {
             if (i < goleiros.length) {
-                const goleiro = goleiros[i];
+              const goleiro = goleiros[i];
                 const pago = goleiro.status_pagamento === 1 ? '✅' : '...';
-                listaFormatada += `${i + 1}. ${goleiro.nome_jogador} - Pgto: ${pago}\n`;
+                const nomeExibido = goleiro.nome_jogador.length > 10 
+                    ? goleiro.nome_jogador.slice(0, 10) + '…' 
+                    : goleiro.nome_jogador;
+                listaFormatada += `${i + 1}. ${nomeExibido} - Pgto: ${pago}\n`;
+
             } else { listaFormatada += `${i + 1}. ...\n`; }
         }
         if (reservas.length > 0) {
             listaFormatada += `\n*Lista de Reserva (${reservas.length})*\n`;
             reservas.forEach(reserva => {
-                const pago = reserva.status_pagamento === 1 ? '✅' : '...';
-                listaFormatada += `- ${reserva.nome_jogador} - Pgto: ${pago}\n`;
+               const pago = reserva.status_pagamento === 1 ? '✅' : '...';
+                const nomeExibido = reserva.nome_jogador.length > 10 
+                    ? reserva.nome_jogador.slice(0, 10) + '…' 
+                    : reserva.nome_jogador;
+                listaFormatada += `- ${nomeExibido} - Pgto: ${pago}\n`;
             });
         }
         await chat.sendMessage(listaFormatada);
