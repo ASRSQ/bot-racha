@@ -1,8 +1,11 @@
 // botFunctions.js
 const db = require('./database');
 const logger = require('./logger');
+const PQueue = require('p-queue');
+const queue = new PQueue({ concurrency: 1 }); // garante que uma função execute por vez
 
-function adicionarJogador(nome, quemAdicionouId, tipoDesejado, chat, message, senderName, porOutro = false) {
+
+function adicionarJogadorInterno(nome, quemAdicionouId, tipoDesejado, chat, message, senderName, porOutro = false) {
     db.get('SELECT max_linha, max_goleiros FROM partida_info WHERE id = 1', (err, limits) => {
         if (err || !limits) {
             logger.error(`Não foi possível buscar os limites de vagas: ${err ? err.message : 'Nenhum limite encontrado'}`);
@@ -34,7 +37,7 @@ function adicionarJogador(nome, quemAdicionouId, tipoDesejado, chat, message, se
     });
 }
 
-function promoverReserva(chat, client) {
+function promoverReservaInterno(chat, client) {
     logger.info("Verificando se há reservas para promover...");
     db.get('SELECT * FROM jogadores WHERE tipo_jogador = "reserva" ORDER BY id ASC LIMIT 1', [], (err, reserva) => {
         if (err) { logger.error(`Erro ao buscar reserva: ${err.message}`); return; }
@@ -88,7 +91,7 @@ function promoverReserva(chat, client) {
     });
 }
 
-async function enviarLista(chat) {
+async function enviarListaInterno(chat) {
     try {
         const getInfo = new Promise((resolve, reject) => {
             db.get('SELECT titulo, data_hora, max_linha, max_goleiros FROM partida_info WHERE id = 1', [], (err, row) => {
@@ -142,6 +145,15 @@ async function enviarLista(chat) {
     }
 }
 
+function adicionarJogador(...args) {
+    queue.add(() => adicionarJogadorInterno(...args));
+}
+function promoverReserva(...args) {
+    queue.add(() => promoverReservaInterno(...args));
+}
+function enviarLista(...args) {
+    queue.add(() => enviarListaInterno(...args));
+}
 module.exports = {
     adicionarJogador,
     promoverReserva,
