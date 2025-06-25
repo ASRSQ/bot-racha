@@ -1,0 +1,18 @@
+# Arquivo .gitignore
+
+# Dependências
+node_modules/
+
+# Arquivos de Sessão e Autenticação
+wwebjs_auth/
+.wwebjs_auth/
+
+# Logs e Banco de Dados
+logs/
+data/
+*.log
+racha.db
+
+# Arquivos do sistema
+.DS_Store
+npm-debug.log
