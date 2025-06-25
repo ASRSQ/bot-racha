@@ -44,17 +44,22 @@ async function handleCommand(client, message) {
                 });
             });
         }
-        else if (command.startsWith('!remover')) {
+       else if (command.startsWith('!remover')) {
     const argumento = body.substring(9).trim();
-    if (!argumento) return message.reply('Uso correto: `!remover <nome ou número>`');
+    if (!argumento) return message.reply('Uso correto: `!remover <nome|número> [goleiro]`');
 
-    const numeroRemover = parseInt(argumento, 10);
+    const partes = argumento.split(' ');
+    const indiceOuNome = partes[0];
+    const isGoleiro = partes.length > 1 && partes[1].toLowerCase() === 'goleiro';
+
+    const numeroRemover = parseInt(indiceOuNome, 10);
 
     if (!isNaN(numeroRemover) && numeroRemover > 0) {
         // ✅ Remover por número
-        db.all('SELECT * FROM jogadores WHERE tipo_jogador IN ("linha", "goleiro") ORDER BY id', [], (err, jogadores) => {
+        const tipo = isGoleiro ? 'goleiro' : 'linha';
+        db.all('SELECT * FROM jogadores WHERE tipo_jogador = ? ORDER BY id', [tipo], (err, jogadores) => {
             if (err) return message.reply("Erro ao consultar o banco de dados.");
-            if (numeroRemover > jogadores.length) return message.reply(`Número inválido. Só existem ${jogadores.length} jogadores na lista principal.`);
+            if (numeroRemover > jogadores.length) return message.reply(`Número inválido. Só existem ${jogadores.length} ${tipo === 'goleiro' ? 'goleiros' : 'jogadores'} na lista.`);
 
             const jogadorAlvo = jogadores[numeroRemover - 1];
             const podeRemover = isSenderAdmin || jogadorAlvo.adicionado_por === senderId;
@@ -65,12 +70,13 @@ async function handleCommand(client, message) {
             db.run('DELETE FROM jogadores WHERE id = ?', [jogadorAlvo.id], function (err) {
                 if (err) return message.reply("Erro ao remover o jogador.");
                 message.reply(`✅ *${jogadorAlvo.nome_jogador}* removido da lista por ${senderName}.`);
-                if (eraVagaPrincipal) promoverReserva(chat, client);
+                if (eraVagaPrincipal && tipo === 'linha') promoverReserva(chat, client);
                 else enviarLista(chat);
             });
         });
+
     } else {
-        // ✅ Remover por nome
+        // ✅ Remover por nome (procura em todos)
         db.get('SELECT * FROM jogadores WHERE nome_jogador LIKE ?', [`%${argumento}%`], (err, row) => {
             if (err) return message.reply("Erro ao consultar o banco de dados.");
             if (!row) return message.reply(`Jogador "${argumento}" não encontrado na lista.`);
@@ -83,12 +89,13 @@ async function handleCommand(client, message) {
             db.run('DELETE FROM jogadores WHERE id = ?', [row.id], function (err) {
                 if (err) return message.reply("Erro ao remover o jogador.");
                 message.reply(`✅ *${row.nome_jogador}* removido da lista por ${senderName}.`);
-                if (eraVagaPrincipal) promoverReserva(chat, client);
+                if (eraVagaPrincipal && row.tipo_jogador === 'linha') promoverReserva(chat, client);
                 else enviarLista(chat);
             });
         });
     }
 }
+
 
         else if (command.startsWith('!add')) {
             const args = body.split(' ').slice(1);
