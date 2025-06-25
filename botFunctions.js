@@ -1,8 +1,9 @@
 // botFunctions.js
 const db = require('./database');
 const logger = require('./logger');
-const PQueue = require('p-queue');
-const queue = new PQueue({ concurrency: 1 }); // garante que uma função execute por vez
+const PQueue = require('p-queue').default;
+const queue = new PQueue({ concurrency: 1 });
+
 
 
 function adicionarJogadorInterno(nome, quemAdicionouId, tipoDesejado, chat, message, senderName, porOutro = false) {
