@@ -123,15 +123,8 @@ async function handleCommand(client, message) {
                     return message.reply("Erro ao buscar as informações do racha. Avise um admin.");
                 }
 
-                // Mensagem 1: Informações
-                const infoMessage = `*💸 Dados para Pagamento do Racha 💸*\n\n` +
-                                    `*Valor:* R$ ${row.valor}\n\n` +
-                                    `*Chave PIX (Celular):*\n` +
-                                    `\`${config.PIX_KEY}\``;
-                await chat.sendMessage(infoMessage);
-                
-                // Mensagem 2: Código Copia e Cola
                 const valorFloat = parseFloat(row.valor.replace(',', '.'));
+
                 const pixCode = PixBR({
                     key: config.PIX_KEY,
                     name: 'Alex de Sousa Ramos',
@@ -140,8 +133,8 @@ async function handleCommand(client, message) {
                     transactionId: 'RACHA'
                 });
                 
-                const pixCodeMessage = `*Pix Copia e Cola:*\n\`${pixCode}\``;
-                await chat.sendMessage(pixCodeMessage);
+                // Envia somente o código PIX, sem nenhum texto adicional
+                await chat.sendMessage(pixCode);
             });
         }
         else if (command === '!ajuda' || command === '!comandos') {
