@@ -114,21 +114,32 @@ async function handleCommand(client, message) {
         else if (command === '!lista') {
             await enviarLista(chat);
         }
-        else if (command === '!pix' || command === '!pagar') {
+        else  if (command === '!pix' || command === '!pagar') {
             logger.info(`Usuário ${senderName} pediu informações do PIX.`);
-            db.get('SELECT valor FROM partida_info WHERE id = 1', [], async (err, row) => {
+            db.get('SELECT valor, titulo FROM partida_info WHERE id = 1', [], async (err, row) => {
                 if (err || !row) {
-                    logger.error(`Erro ao buscar valor do PIX: ${err ? err.message : 'Nenhum valor definido'}`);
-                    return message.reply("Erro ao buscar o valor do racha. Avise um admin.");
+                    logger.error(`Erro ao buscar informações da partida: ${err ? err.message : 'Nenhuma informação encontrada'}`);
+                    return message.reply("Erro ao buscar as informações do racha. Avise um admin.");
                 }
-                const valorNumerico = row.valor.replace(',', '.');
+
+                // Converte o valor para o formato numérico correto
+                const valorFloat = parseFloat(row.valor.replace(',', '.'));
+
+                // Gera o código PIX Copia e Cola
+                const pixCode = PixBR({
+                    key: config.PIX_KEY,
+                    name: row.titulo, // Usa o título do racha como nome do recebedor
+                    city: 'STA QUITERIA', // Cidade do recebedor (máx 15 caracteres)
+                    amount: valorFloat,
+                    transactionId: 'RACHA' // ID da transação (opcional)
+                });
 
                 const pixMessage = `*💸 Dados para Pagamento do Racha 💸*\n\n` +
                                    `*Valor:* R$ ${row.valor}\n\n` +
                                    `*Chave PIX (Celular):*\n` +
                                    `\`${config.PIX_KEY}\`\n\n` +
-                                   `*Valor (copia e cola):*\n` +
-                                   `\`${valorNumerico}\`\n\n` +
+                                   `*Pix Copia e Cola:*\n` +
+                                   `\`${pixCode}\`\n\n` +
                                    `_Após pagar, avise um admin para confirmar sua presença na lista!_ ✅`;
                 await message.reply(pixMessage);
             });
