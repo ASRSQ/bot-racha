@@ -3,7 +3,7 @@ const db = require('./database');
 const logger = require('./logger');
 const config = require('./config');
 const { adicionarJogador, promoverReserva, enviarLista } = require('./botFunctions');
-const { PixBR } = require('pixbrasil'); // I
+const { PixBR } = require('pixbrasil'); // 
 
 async function handleCommand(client, message) {
     const chat = await message.getChat();
@@ -117,22 +117,21 @@ async function handleCommand(client, message) {
         }
         else  if (command === '!pix' || command === '!pagar') {
             logger.info(`Usuário ${senderName} pediu informações do PIX.`);
-            db.get('SELECT valor, titulo FROM partida_info WHERE id = 1', [], async (err, row) => {
+            db.get('SELECT valor FROM partida_info WHERE id = 1', [], async (err, row) => {
                 if (err || !row) {
                     logger.error(`Erro ao buscar informações da partida: ${err ? err.message : 'Nenhuma informação encontrada'}`);
                     return message.reply("Erro ao buscar as informações do racha. Avise um admin.");
                 }
 
-                // Converte o valor para o formato numérico correto
                 const valorFloat = parseFloat(row.valor.replace(',', '.'));
 
-                // Gera o código PIX Copia e Cola
+                // Gera o código PIX com o nome do recebedor fixo
                 const pixCode = PixBR({
                     key: config.PIX_KEY,
-                    name: row.titulo, // Usa o título do racha como nome do recebedor
-                    city: 'STA QUITERIA', // Cidade do recebedor (máx 15 caracteres)
+                    name: 'Alex de Sousa Ramos', // Nome do recebedor alterado
+                    city: 'STA QUITERIA',
                     amount: valorFloat,
-                    transactionId: 'RACHA' // ID da transação (opcional)
+                    transactionId: 'RACHA'
                 });
 
                 const pixMessage = `*💸 Dados para Pagamento do Racha 💸*\n\n` +
@@ -140,7 +139,7 @@ async function handleCommand(client, message) {
                                    `*Chave PIX (Celular):*\n` +
                                    `\`${config.PIX_KEY}\`\n\n` +
                                    `*Pix Copia e Cola:*\n` +
-                                   `\`${pixCode}\`\n\n` +
+                                   `\`${pixCode}\`\n\n` + // Formato de cópia aplicado
                                    `_Após pagar, avise um admin para confirmar sua presença na lista!_ ✅`;
                 await message.reply(pixMessage);
             });
