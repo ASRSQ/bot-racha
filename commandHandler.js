@@ -115,33 +115,33 @@ async function handleCommand(client, message) {
         else if (command === '!lista') {
             await enviarLista(chat);
         }
-        else  if (command === '!pix' || command === '!pagar') {
+        else if (command === '!pix' || command === '!pagar') {
             logger.info(`Usuário ${senderName} pediu informações do PIX.`);
-            db.get('SELECT valor FROM partida_info WHERE id = 1', [], async (err, row) => {
+            db.get('SELECT valor, titulo FROM partida_info WHERE id = 1', [], async (err, row) => {
                 if (err || !row) {
                     logger.error(`Erro ao buscar informações da partida: ${err ? err.message : 'Nenhuma informação encontrada'}`);
                     return message.reply("Erro ao buscar as informações do racha. Avise um admin.");
                 }
 
+                // Mensagem 1: Informações
+                const infoMessage = `*💸 Dados para Pagamento do Racha 💸*\n\n` +
+                                    `*Valor:* R$ ${row.valor}\n\n` +
+                                    `*Chave PIX (Celular):*\n` +
+                                    `\`${config.PIX_KEY}\``;
+                await chat.sendMessage(infoMessage);
+                
+                // Mensagem 2: Código Copia e Cola
                 const valorFloat = parseFloat(row.valor.replace(',', '.'));
-
-                // Gera o código PIX com o nome do recebedor fixo
                 const pixCode = PixBR({
                     key: config.PIX_KEY,
-                    name: 'Alex de Sousa Ramos', // Nome do recebedor alterado
+                    name: 'Alex de Sousa Ramos',
                     city: 'STA QUITERIA',
                     amount: valorFloat,
                     transactionId: 'RACHA'
                 });
-
-                const pixMessage = `*💸 Dados para Pagamento do Racha 💸*\n\n` +
-                                   `*Valor:* R$ ${row.valor}\n\n` +
-                                   `*Chave PIX (Celular):*\n` +
-                                   `\`${config.PIX_KEY}\`\n\n` +
-                                   `*Pix Copia e Cola:*\n` +
-                                   `\`${pixCode}\`\n\n` + // Formato de cópia aplicado
-                                   `_Após pagar, avise um admin para confirmar sua presença na lista!_ ✅`;
-                await message.reply(pixMessage);
+                
+                const pixCodeMessage = `*Pix Copia e Cola:*\n\`${pixCode}\``;
+                await chat.sendMessage(pixCodeMessage);
             });
         }
         else if (command === '!ajuda' || command === '!comandos') {
