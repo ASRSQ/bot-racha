@@ -3,6 +3,7 @@ const db = require('./database');
 const logger = require('./logger');
 const config = require('./config');
 const { adicionarJogador, promoverReserva, enviarLista } = require('./botFunctions');
+const { PixBR } = require('pixbrasil'); // I
 
 async function handleCommand(client, message) {
     const chat = await message.getChat();
