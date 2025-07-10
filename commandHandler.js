@@ -142,7 +142,7 @@ async function handleCommand(client, message) {
                 });
 
                 // Envia o código em uma mensagem separada e formatada
-                await chat.sendMessage(`\`${pixCode}\``);
+                await chat.sendMessage(pixCode);
             });
         }
         else if (command === '!ajuda' || command === '!comandos') {
