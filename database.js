@@ -23,10 +23,16 @@ const db = new sqlite3.Database('./racha.db', sqlite3.OPEN_READWRITE | sqlite3.O
             id INTEGER PRIMARY KEY CHECK (id = 1),
             titulo TEXT DEFAULT 'Racha dos Crias',
             data_hora TEXT DEFAULT 'A definir',
+            valor TEXT DEFAULT '${config.DEFAULT_RACHA_VALUE}', 
             max_linha INTEGER DEFAULT ${config.DEFAULT_MAX_LINHA},
             max_goleiros INTEGER DEFAULT ${config.DEFAULT_MAX_GOLEIROS}
         )`, (err) => {
             if (err) return logger.error(`Erro ao criar tabela da partida: ${err.message}`);
+            db.run(`ALTER TABLE partida_info ADD COLUMN valor TEXT DEFAULT '${config.DEFAULT_RACHA_VALUE}'`, (alterErr) => {
+                if (alterErr && !alterErr.message.includes('duplicate column name')) {
+                     logger.error(`Erro ao adicionar coluna 'valor': ${alterErr.message}`);
+                }
+            });
             db.run(`INSERT OR IGNORE INTO partida_info (id) VALUES (1)`);
             logger.info("Tabela 'partida_info' pronta.");
         });

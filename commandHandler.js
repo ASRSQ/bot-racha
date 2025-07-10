@@ -6,15 +6,15 @@ const { adicionarJogador, promoverReserva, enviarLista } = require('./botFunctio
 
 async function handleCommand(client, message) {
     const chat = await message.getChat();
-    if (!chat.isGroup) return; 
-    
+    if (!chat.isGroup) return;
+
     const body = message.body.trim();
     const command = body.toLowerCase();
     const sender = await message.getContact();
     const senderId = sender.id._serialized;
     const senderName = sender.pushname || sender.name;
     const isSenderAdmin = config.ADMINS.includes(senderId);
-    
+
 
     logger.info(`[GRUPO: ${chat.name}] [USER: ${senderName}] Mensagem: "${body}"`);
 
@@ -38,65 +38,63 @@ async function handleCommand(client, message) {
                     if (this.changes > 0) {
                         message.reply(`Ok, ${senderName}, você foi removido(a) da lista.`);
                         logger.info(`Usuário ${senderName} saiu da lista.`);
-                        if (eraVagaPrincipal) { promoverReserva(chat, client); } 
+                        if (eraVagaPrincipal) { promoverReserva(chat, client); }
                         else { enviarLista(chat); }
                     }
                 });
             });
         }
        else if (command.startsWith('!remover')) {
-    const argumento = body.substring(9).trim();
-    if (!argumento) return message.reply('Uso correto: `!remover <nome|número> [goleiro]`');
+            const argumento = body.substring(9).trim();
+            if (!argumento) return message.reply('Uso correto: `!remover <nome|número> [goleiro]`');
 
-    const partes = argumento.split(' ');
-    const indiceOuNome = partes[0];
-    const isGoleiro = partes.length > 1 && partes[1].toLowerCase() === 'goleiro';
+            const partes = argumento.split(' ');
+            const indiceOuNome = partes[0];
+            const isGoleiro = partes.length > 1 && partes[1].toLowerCase() === 'goleiro';
 
-    const numeroRemover = parseInt(indiceOuNome, 10);
+            const numeroRemover = parseInt(indiceOuNome, 10);
 
-    if (!isNaN(numeroRemover) && numeroRemover > 0) {
-        // ✅ Remover por número
-        const tipo = isGoleiro ? 'goleiro' : 'linha';
-        db.all('SELECT * FROM jogadores WHERE tipo_jogador = ? ORDER BY id', [tipo], (err, jogadores) => {
-            if (err) return message.reply("Erro ao consultar o banco de dados.");
-            if (numeroRemover > jogadores.length) return message.reply(`Número inválido. Só existem ${jogadores.length} ${tipo === 'goleiro' ? 'goleiros' : 'jogadores'} na lista.`);
+            if (!isNaN(numeroRemover) && numeroRemover > 0) {
+                // ✅ Remover por número
+                const tipo = isGoleiro ? 'goleiro' : 'linha';
+                db.all('SELECT * FROM jogadores WHERE tipo_jogador = ? ORDER BY id', [tipo], (err, jogadores) => {
+                    if (err) return message.reply("Erro ao consultar o banco de dados.");
+                    if (numeroRemover > jogadores.length) return message.reply(`Número inválido. Só existem ${jogadores.length} ${tipo === 'goleiro' ? 'goleiros' : 'jogadores'} na lista.`);
 
-            const jogadorAlvo = jogadores[numeroRemover - 1];
-            const podeRemover = isSenderAdmin || jogadorAlvo.adicionado_por === senderId;
-            if (!podeRemover) return message.reply(`❌ Você não pode remover *${jogadorAlvo.nome_jogador}*.`);
+                    const jogadorAlvo = jogadores[numeroRemover - 1];
+                    const podeRemover = isSenderAdmin || jogadorAlvo.adicionado_por === senderId;
+                    if (!podeRemover) return message.reply(`❌ Você não pode remover *${jogadorAlvo.nome_jogador}*.`);
 
-            const eraVagaPrincipal = jogadorAlvo.tipo_jogador !== 'reserva';
+                    const eraVagaPrincipal = jogadorAlvo.tipo_jogador !== 'reserva';
 
-            db.run('DELETE FROM jogadores WHERE id = ?', [jogadorAlvo.id], function (err) {
-                if (err) return message.reply("Erro ao remover o jogador.");
-                message.reply(`✅ *${jogadorAlvo.nome_jogador}* removido da lista por ${senderName}.`);
-                if (eraVagaPrincipal && tipo === 'linha') promoverReserva(chat, client);
-                else enviarLista(chat);
-            });
-        });
+                    db.run('DELETE FROM jogadores WHERE id = ?', [jogadorAlvo.id], function (err) {
+                        if (err) return message.reply("Erro ao remover o jogador.");
+                        message.reply(`✅ *${jogadorAlvo.nome_jogador}* removido da lista por ${senderName}.`);
+                        if (eraVagaPrincipal && tipo === 'linha') promoverReserva(chat, client);
+                        else enviarLista(chat);
+                    });
+                });
 
-    } else {
-        // ✅ Remover por nome (procura em todos)
-        db.get('SELECT * FROM jogadores WHERE nome_jogador LIKE ?', [`%${argumento}%`], (err, row) => {
-            if (err) return message.reply("Erro ao consultar o banco de dados.");
-            if (!row) return message.reply(`Jogador "${argumento}" não encontrado na lista.`);
+            } else {
+                // ✅ Remover por nome (procura em todos)
+                db.get('SELECT * FROM jogadores WHERE nome_jogador LIKE ?', [`%${argumento}%`], (err, row) => {
+                    if (err) return message.reply("Erro ao consultar o banco de dados.");
+                    if (!row) return message.reply(`Jogador "${argumento}" não encontrado na lista.`);
 
-            const podeRemover = isSenderAdmin || row.adicionado_por === senderId;
-            if (!podeRemover) return message.reply(`❌ Você não pode remover *${row.nome_jogador}*.`);
+                    const podeRemover = isSenderAdmin || row.adicionado_por === senderId;
+                    if (!podeRemover) return message.reply(`❌ Você não pode remover *${row.nome_jogador}*.`);
 
-            const eraVagaPrincipal = row.tipo_jogador !== 'reserva';
+                    const eraVagaPrincipal = row.tipo_jogador !== 'reserva';
 
-            db.run('DELETE FROM jogadores WHERE id = ?', [row.id], function (err) {
-                if (err) return message.reply("Erro ao remover o jogador.");
-                message.reply(`✅ *${row.nome_jogador}* removido da lista por ${senderName}.`);
-                if (eraVagaPrincipal && row.tipo_jogador === 'linha') promoverReserva(chat, client);
-                else enviarLista(chat);
-            });
-        });
-    }
-}
-
-
+                    db.run('DELETE FROM jogadores WHERE id = ?', [row.id], function (err) {
+                        if (err) return message.reply("Erro ao remover o jogador.");
+                        message.reply(`✅ *${row.nome_jogador}* removido da lista por ${senderName}.`);
+                        if (eraVagaPrincipal && row.tipo_jogador === 'linha') promoverReserva(chat, client);
+                        else enviarLista(chat);
+                    });
+                });
+            }
+        }
         else if (command.startsWith('!add')) {
             const args = body.split(' ').slice(1);
             if (args.length === 0) return message.reply('Uso: `!add <nome> [goleiro]`');
@@ -118,12 +116,22 @@ async function handleCommand(client, message) {
         }
         else if (command === '!pix' || command === '!pagar') {
             logger.info(`Usuário ${senderName} pediu informações do PIX.`);
-            const pixMessage = `*💸 Dados para Pagamento do Racha 💸*\n\n` +
-                               `*Valor:* R$ ${config.PIX_VALUE}\n\n` +
-                               `*Chave PIX (Celular):*\n` +
-                               `\`${config.PIX_KEY}\`\n\n` +
-                               `_Após pagar, avise um admin para confirmar sua presença na lista!_ ✅`;
-            await message.reply(pixMessage);
+            db.get('SELECT valor FROM partida_info WHERE id = 1', [], async (err, row) => {
+                if (err || !row) {
+                    logger.error(`Erro ao buscar valor do PIX: ${err ? err.message : 'Nenhum valor definido'}`);
+                    return message.reply("Erro ao buscar o valor do racha. Avise um admin.");
+                }
+                const valorNumerico = row.valor.replace(',', '.');
+
+                const pixMessage = `*💸 Dados para Pagamento do Racha 💸*\n\n` +
+                                   `*Valor:* R$ ${row.valor}\n\n` +
+                                   `*Chave PIX (Celular):*\n` +
+                                   `\`${config.PIX_KEY}\`\n\n` +
+                                   `*Valor (copia e cola):*\n` +
+                                   `\`${valorNumerico}\`\n\n` +
+                                   `_Após pagar, avise um admin para confirmar sua presença na lista!_ ✅`;
+                await message.reply(pixMessage);
+            });
         }
         else if (command === '!ajuda' || command === '!comandos') {
             let helpMessage = `*🤖 Comandos do Bot do Racha 🤖*\n\n`;
@@ -142,13 +150,28 @@ async function handleCommand(client, message) {
                 helpMessage += `*!setvagas <linha> <goleiros>*\n_Define o nº de vagas. Ex: !setvagas 20 2_\n\n`;
                 helpMessage += `*!settitulo <texto>*\n_Altera o título._\n\n`;
                 helpMessage += `*!setdata <texto>*\n_Altera a data/hora. Ex: !setdata 25/12 17:00_\n\n`;
+                helpMessage += `*!setvalor <valor>*\n_Altera o valor do racha. Ex: !setvalor 7,50_\n\n`;
                 helpMessage += `*!limpar*\n_Zera a lista de jogadores._`;
             }
             await message.reply(helpMessage);
         }
-        else if (['!pagou', '!settitulo', '!setdata', '!limpar', '!setvagas'].some(adminCmd => command.startsWith(adminCmd))) {
+        else if (['!pagou', '!settitulo', '!setdata', '!limpar', '!setvagas', '!setvalor'].some(adminCmd => command.startsWith(adminCmd))) {
             if (!isSenderAdmin) return message.reply('❌ Apenas administradores podem usar este comando.');
-            if (command.startsWith('!pagou')) {
+
+            if (command.startsWith('!setvalor')) {
+                const novoValor = body.substring(10).trim();
+                if (!novoValor) return message.reply('Uso: !setvalor <novo valor>');
+                logger.info(`Admin ${senderName} alterando valor para '${novoValor}'`);
+                db.run(`UPDATE partida_info SET valor = ? WHERE id = 1`, [novoValor], (err) => {
+                    if (err) {
+                        logger.error(err.message);
+                        return message.reply("Erro ao atualizar o valor.");
+                    }
+                    message.reply(`💸 Valor do racha atualizado para: *R$ ${novoValor}*`);
+                    enviarLista(chat);
+                });
+            }
+            else if (command.startsWith('!pagou')) {
                 const nome = body.substring(7).trim();
                 if (!nome) return message.reply('Uso: !pagou <nome> ou !pagou <número>');
                 const numeroNaLista = parseInt(nome, 10);
@@ -160,7 +183,7 @@ async function handleCommand(client, message) {
                             const jogadorAlvo = jogadoresLinha[numeroNaLista - 1];
                             db.run('UPDATE jogadores SET status_pagamento = 1 WHERE id = ?', [jogadorAlvo.id], function(err) {
                                 if(err) { logger.error(err.message); return message.reply("Erro ao atualizar pagamento."); }
-                                if (this.changes > 0) { message.reply(`Pagamento do Nº${numeroNaLista} (*${jogadorAlvo.nome_jogador}*) confirmado! ✅`); enviarLista(chat); } 
+                                if (this.changes > 0) { message.reply(`Pagamento do Nº${numeroNaLista} (*${jogadorAlvo.nome_jogador}*) confirmado! ✅`); enviarLista(chat); }
                                 else { message.reply(`Não foi possível atualizar o pagamento para o Nº${numeroNaLista}.`); }
                             });
                         } else { message.reply(`Número inválido. Existem apenas ${jogadoresLinha.length} jogadores na lista de linha.`); }
@@ -169,7 +192,7 @@ async function handleCommand(client, message) {
                     logger.info(`Admin ${senderName} confirmando pagamento para '${nome}'`);
                     db.run('UPDATE jogadores SET status_pagamento = 1 WHERE nome_jogador LIKE ?', [`%${nome}%`], function(err) {
                         if(err) { logger.error(err.message); return message.reply("Erro ao atualizar pagamento."); }
-                        if (this.changes > 0) { message.reply(`Pagamento de *${nome}* confirmado! ✅`); enviarLista(chat); } 
+                        if (this.changes > 0) { message.reply(`Pagamento de *${nome}* confirmado! ✅`); enviarLista(chat); }
                         else { message.reply(`Não encontrei o jogador "${nome}" na lista.`); }
                     });
                 }
@@ -214,7 +237,7 @@ async function handleCommand(client, message) {
                 });
             }
         }
-    } catch (e) { 
+    } catch (e) {
         logger.error(`Erro fatal no processamento da mensagem: ${e.stack || e.message}`);
         message.reply("Ocorreu um erro interno. Avise o admin!");
     }
