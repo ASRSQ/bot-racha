@@ -5,19 +5,16 @@ const logger = require('./logger');
 // --- PQUEUE (ESM em projeto CommonJS) ---
 // Em CJS não dá require('p-queue'); use import() dinâmico.
 // Criamos uma promessa que instancia a fila uma vez só.
+// Fila com PQueue — fallback robusto
 const queuePromise = (async () => {
-// Em alguns ambientes o export pode vir como default; em outros, como o próprio módulo.
-const PQueue = mod?.default || mod;
- if (typeof PQueue !== 'function') {
-   throw new Error('Falha ao carregar p-queue: export inesperado');
- }
-  return new PQueue({ concurrency: 1 });})();
+  const mod = await import('p-queue');
+  const PQueue = mod?.default || mod;
+  if (typeof PQueue !== 'function') {
+    throw new Error('Falha ao carregar p-queue: export inesperado');
+  }
+  return new PQueue({ concurrency: 1 });
+})();
 
-// Helpers para usar a fila sem mudar chamadas externas
-function enqueue(taskFn) {
-  // taskFn deve ser uma função que retorna uma Promise
-  return queuePromise.then(q => q.add(taskFn));
-}
 
 // ---------------- SUAS FUNÇÕES ----------------
 
