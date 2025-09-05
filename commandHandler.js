@@ -3,7 +3,7 @@ const db = require('./database');
 const logger = require('./logger');
 const config = require('./config');
 const { adicionarJogador, promoverReserva, enviarLista } = require('./botFunctions');
-const { PixBR } = require('pixbrasil'); // 
+
 
 async function handleCommand(client, message) {
     const chat = await message.getChat();
@@ -116,6 +116,7 @@ async function handleCommand(client, message) {
             await enviarLista(chat);
         }
         else if (command === '!pix' || command === '!pagar') {
+            const { PixBR } = await import('pixbrasil');
             logger.info(`Usuário ${senderName} pediu informações do PIX.`);
             db.get('SELECT valor FROM partida_info WHERE id = 1', [], async (err, row) => {
                 if (err || !row) {

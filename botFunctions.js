@@ -6,9 +6,12 @@ const logger = require('./logger');
 // Em CJS não dá require('p-queue'); use import() dinâmico.
 // Criamos uma promessa que instancia a fila uma vez só.
 const queuePromise = (async () => {
-  const { default: PQueue } = await import('p-queue');
-  return new PQueue({ concurrency: 1 });
-})();
+// Em alguns ambientes o export pode vir como default; em outros, como o próprio módulo.
+const PQueue = mod?.default || mod;
+ if (typeof PQueue !== 'function') {
+   throw new Error('Falha ao carregar p-queue: export inesperado');
+ }
+  return new PQueue({ concurrency: 1 });})();
 
 // Helpers para usar a fila sem mudar chamadas externas
 function enqueue(taskFn) {
